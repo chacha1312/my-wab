@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나를 소개하는 페이지</title>
+    <style>
+        /* 기본 리셋 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* 배경: 차분하고 밝은 하늘색에서 깊고 어두운 파란색으로 이어지는 그라데이션 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #38bdf8 40%, #0369a1 75%, #0f172a 100%);
+            background-attachment: fixed;
+            color: #0f172a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 3rem 1rem;
+            word-break: keep-all;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 580px;
+            margin: 0 auto;
+        }
+
+        /* 헤더 영역 */
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        header h1 {
+            font-size: 2.8rem;
+            color: #ffffff;
+            font-weight: 800;
+            margin-bottom: 0.6rem;
+            text-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            letter-spacing: -0.03em;
+        }
+
+        header p {
+            font-size: 1.25rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+            letter-spacing: -0.01em;
+        }
+
+        /* 카드 목록 영역 */
+        .card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* 개별 카드 스타일 */
+        .card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 16px;
+            padding: 1.4rem 1.6rem;
+            box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.16);
+        }
+
+        /* 카드 헤더 (아이콘 + 제목 + 화살표) */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title-group {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .card-icon {
+            font-size: 1.8rem;
+            line-height: 1;
+        }
+
+        .card-title {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
+
+        /* 접기/펼치기 토글 화살표 */
+        .toggle-icon {
+            font-size: 0.9rem;
+            color: #0284c7;
+            font-weight: 700;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* 카드 펼침 내용 */
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, margin-top 0.25s ease;
+            opacity: 0;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #334155;
+            font-weight: 500;
+            margin-top: 0;
+        }
+
+        /* 카드 활성화 상태 */
+        .card.active {
+            border-color: #7dd3fc;
+            background: #ffffff;
+        }
+
+        .card.active .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .card.active .card-content {
+            max-height: 200px;
+            opacity: 1;
+            margin-top: 1rem;
+            padding-top: 0.9rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        /* 섹션 공통 마크업 */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 1.8rem;
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        /* 방명록 입력폼 스티일링 */
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+            color: #0f172a;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus, .form-textarea:focus {
+            border-color: #0284c7;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+            background: #ffffff;
+        }
+
+        .submit-btn {
+            padding: 0.85rem;
+            border-radius: 12px;
+            border: none;
+            background: #0284c7;
+            color: #ffffff;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.1s ease;
+        }
+
+        .submit-btn:hover {
+            background: #0369a1;
+        }
+
+        .submit-btn:active {
+            transform: scale(0.99);
+        }
+
+        /* 모바일 대응 */
+        @media (max-width: 600px) {
+            body {
+                padding: 2rem 0.8rem;
+            }
+
+            header h1 {
+                font-size: 2.2rem;
+            }
+
+            header p {
+                font-size: 1.1rem;
+            }
+
+            .card {
+                padding: 1.2rem 1.3rem;
+            }
+
+            .card-icon {
+                font-size: 1.5rem;
+            }
+
+            .card-title {
+                font-size: 1.2rem;
+            }
+
+            .card-content {
+                font-size: 1rem;
+            }
+
+            .glass-card {
+                padding: 1.4rem;
+                border-radius: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 메인 헤더 -->
+        <header>
+            <h1 id="nickname">차건희</h1>
+            <p id="tagline">평범한 중학생입니다.</p>
+        </header>
+
+        <!-- 카드 목록 -->
+        <main class="card-list">
+            
+            <!-- 생일 -->
+            <div class="card" onclick="toggleCard(this)">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <span class="card-icon">🎂</span>
+                        <h2 class="card-title">생일</h2>
+                    </div>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    12월 29일
+                </div>
+            </div>
+
+            <!-- 요즘 관심사 -->
+            <div class="card" onclick="toggleCard(this)">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <span class="card-icon">✨</span>
+                        <h2 class="card-title">요즘 관심사</h2>
+                    </div>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    얼불춤 맵 제작
+                </div>
+            </div>
+
+            <!-- 취미 -->
+            <div class="card" onclick="toggleCard(this)">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <span class="card-icon">🎨</span>
+                        <h2 class="card-title">취미</h2>
+                    </div>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    딱히...?
+                </div>
+            </div>
+
+            <!-- 나이 -->
+            <div class="card" onclick="toggleCard(this)">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <span class="card-icon">🎈</span>
+                        <h2 class="card-title">나이</h2>
+                    </div>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    14살(만 12살)
+                </div>
+            </div>
+
+            <!-- 나를 상징하는 색 -->
+            <div class="card" onclick="toggleCard(this)">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <span class="card-icon">🌊</span>
+                        <h2 class="card-title">나를 상징하는 색</h2>
+                    </div>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    검정색 (무엇이 묻어도 변하지 않는 색)
+                </div>
+            </div>
+
+            <!-- 좋아하는 것 -->
+            <div class="card" onclick="toggleCard(this)">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <span class="card-icon">🍦</span>
+                        <h2 class="card-title">좋아하는 것</h2>
+                    </div>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    얼불춤, 친구들(김서후, 서지원, 김민준, 우종현, 김수현, 장현호, 손예준), 과학
+                </div>
+            </div>
+
+        </main>
+
+        <!-- 방명록 섹션 -->
+        <section class="glass-card" style="margin-top: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1.2rem;">
+                <h2 style="font-size: 1.4rem; font-weight: 700; color: #0f172a; letter-spacing: -0.02em;">💬 방명록</h2>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 500;">모두와 공유됩니다</span>
+            </div>
+
+            <!-- 메시지 작성 폼 -->
+            <form id="guestbook-form" onsubmit="addGuestbookMessage(event)" style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
+                <input type="text" id="guest-name" class="form-input" placeholder="이름 (닉네임)" required maxlength="20">
+                <textarea id="guest-message" class="form-textarea" placeholder="남기실 한 마디를 적어주세요!" required rows="3" maxlength="200" style="resize: none; font-family: inherit;"></textarea>
+                <button type="submit" id="submit-btn" class="submit-btn">
+                    메시지 남기기
+                </button>
+            </form>
+
+            <!-- 방명록 수정 모달 영역 -->
+            <div id="edit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; padding: 1rem;">
+                <div style="background: white; border-radius: 16px; padding: 1.5rem; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+                    <h3 style="margin-bottom: 1rem; font-size: 1.2rem; font-weight: 700; color: #0f172a;">메시지 수정</h3>
+                    <textarea id="edit-message-input" class="form-textarea" rows="3" maxlength="200" style="resize: none; font-family: inherit; margin-bottom: 1rem;"></textarea>
+                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                        <button type="button" onclick="closeEditModal()" style="padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; color: #475569; font-weight: 600; cursor: pointer;">취소</button>
+                        <button type="button" onclick="saveEditMessage()" style="padding: 0.6rem 1rem; border-radius: 8px; border: none; background: #0284c7; color: white; font-weight: 600; cursor: pointer;">저장</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 방명록 목록 -->
+            <div id="guestbook-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <p style="color: #64748b; text-align: center; padding: 1.2rem; font-size: 0.95rem;">방명록을 불러오는 중...</p>
+            </div>
+        </section>
+    </div>
+
+    <!-- 인터랙션 및 Firebase 스크립트 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 기존 카드 토글 함수
+        window.toggleCard = function(cardElement) {
+            cardElement.classList.toggle('active');
+        };
+
+        // Firebase 설정 및 초기화
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+        let editingDocId = null;
+
+        if (firebaseConfig) {
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const db = getFirestore(app);
+
+            // 데이터베이스 컬렉션 경로
+            const guestbookCollection = collection(db, 'artifacts', appId, 'public', 'data', 'guestbook');
+
+            // 인증 처리 후 방명록 동기화
+            async function initApp() {
+                try {
+                    let userCredential;
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        userCredential = await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        userCredential = await signInAnonymously(auth);
+                    }
+
+                    const currentUserId = userCredential.user.uid;
+
+                    // 실시간 방명록 목록 불러오기
+                    onSnapshot(guestbookCollection, (snapshot) => {
+                        const guestbookList = document.getElementById('guestbook-list');
+                        if (snapshot.empty) {
+                            guestbookList.innerHTML = '<p style="color: #64748b; text-align: center; padding: 1.2rem; font-size: 0.95rem;">첫 번째 방명록을 남겨보세요!</p>';
+                            return;
+                        }
+
+                        const items = [];
+                        snapshot.forEach((doc) => {
+                            items.push({ id: doc.id, ...doc.data() });
+                        });
+
+                        // 최신 작성 순으로 정렬
+                        items.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+                        guestbookList.innerHTML = items.map(item => {
+                            const isMyMessage = item.userId === currentUserId;
+                            return `
+                                <div style="background: rgba(248, 250, 252, 0.9); padding: 1rem 1.1rem; border-radius: 12px; border: 1px solid #e2e8f0; position: relative;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                                        <strong style="font-size: 0.95rem; color: #0f172a; font-weight: 700;">${escapeHtml(item.name)}</strong>
+                                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                            <span style="font-size: 0.8rem; color: #94a3b8;">${formatDate(item.createdAt)}</span>
+                                            ${isMyMessage ? `
+                                                <button onclick="openEditModal('${item.id}', '${escapeHtml(item.message).replace(/'/g, "\\'")}')" style="background: none; border: none; color: #0284c7; font-size: 0.78rem; font-weight: 600; cursor: pointer; padding: 0;">수정</button>
+                                                <button onclick="deleteGuestbookMessage('${item.id}')" style="background: none; border: none; color: #ef4444; font-size: 0.78rem; font-weight: 600; cursor: pointer; padding: 0;">삭제</button>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                    <p style="font-size: 0.98rem; color: #334155; white-space: pre-line; word-break: break-word; line-height: 1.5;">${escapeHtml(item.message)}</p>
+                                </div>
+                            `;
+                        }).join('');
+                    }, (error) => {
+                        console.error("방명록 불러오기 오류:", error);
+                        document.getElementById('guestbook-list').innerHTML = '<p style="color: #ef4444; text-align: center; font-size: 0.9rem;">불러오기 실패</p>';
+                    });
+
+                } catch (err) {
+                    console.error("인증 실패:", err);
+                }
+            }
+
+            // 메시지 등록 함수
+            window.addGuestbookMessage = async function(event) {
+                event.preventDefault();
+                const nameInput = document.getElementById('guest-name');
+                const messageInput = document.getElementById('guest-message');
+                const submitBtn = document.getElementById('submit-btn');
+
+                const name = nameInput.value.trim();
+                const message = messageInput.value.trim();
+                const currentUserId = auth.currentUser ? auth.currentUser.uid : null;
+
+                if (!name || !message || !currentUserId) return;
+
+                submitBtn.disabled = true;
+                submitBtn.innerText = "등록 중...";
+
+                try {
+                    await addDoc(guestbookCollection, {
+                        name: name,
+                        message: message,
+                        userId: currentUserId,
+                        createdAt: serverTimestamp()
+                    });
+
+                    nameInput.value = '';
+                    messageInput.value = '';
+                } catch (err) {
+                    console.error("작성 오류:", err);
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = "메시지 남기기";
+                }
+            };
+
+            // 메시지 수정 모달 열기
+            window.openEditModal = function(id, currentText) {
+                editingDocId = id;
+                document.getElementById('edit-message-input').value = currentText;
+                document.getElementById('edit-modal').style.display = 'flex';
+            };
+
+            // 모달 닫기
+            window.closeEditModal = function() {
+                editingDocId = null;
+                document.getElementById('edit-modal').style.display = 'none';
+            };
+
+            // 수정 내용 저장
+            window.saveEditMessage = async function() {
+                if (!editingDocId) return;
+                const newText = document.getElementById('edit-message-input').value.trim();
+                if (!newText) return;
+
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'guestbook', editingDocId);
+                    await updateDoc(docRef, {
+                        message: newText
+                    });
+                    closeEditModal();
+                } catch (err) {
+                    console.error("수정 오류:", err);
+                }
+            };
+
+            // 메시지 삭제 함수
+            window.deleteGuestbookMessage = async function(id) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'guestbook', id);
+                    await deleteDoc(docRef);
+                } catch (err) {
+                    console.error("삭제 오류:", err);
+                }
+            };
+
+            // HTML 이스케이프 (XSS 방지)
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.innerText = text || '';
+                return div.innerHTML;
+            }
+
+            // 날짜 포맷
+            function formatDate(timestamp) {
+                if (!timestamp) return '방금 전';
+                const date = timestamp.toDate ? timestamp.toDate() : new Date();
+                return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+            }
+
+            initApp();
+        }
+    </script>
+</body>
+</html>
