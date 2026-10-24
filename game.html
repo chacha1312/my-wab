@@ -47,7 +47,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 18px;
+      padding: 10px 16px;
       background: rgba(15, 20, 35, 0.85);
       backdrop-filter: blur(8px);
       border-bottom: 2px solid #2a3250;
@@ -61,7 +61,7 @@
     }
 
     .hud-label {
-      font-size: 0.75rem;
+      font-size: 0.65rem;
       color: #8a99b5;
       font-weight: bold;
       letter-spacing: 1px;
@@ -69,7 +69,7 @@
     }
 
     .hud-value {
-      font-size: 1.8rem;
+      font-size: 1.5rem;
       font-weight: 900;
       font-family: monospace;
       color: #00ffcc;
@@ -79,6 +79,14 @@
     #score-val {
       color: #ff007f;
       text-shadow: 0 0 10px rgba(255, 0, 127, 0.5);
+    }
+
+    .hud-subvalue {
+      font-size: 0.75rem;
+      font-weight: bold;
+      font-family: monospace;
+      color: #ffcc00;
+      margin-top: 1px;
     }
 
     /* 상단 일시정지 버튼 */
@@ -365,6 +373,19 @@
       transform: scale(0.97);
     }
 
+    /* 하단 저장 안내 문구 */
+    .storage-notice {
+      position: absolute;
+      bottom: 8px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-size: 0.7rem;
+      color: #5d6b82;
+      pointer-events: none;
+      z-index: 25;
+    }
+
     /* 게임오버 점수판 스타일 */
     .final-score-box {
       background: #1c233d;
@@ -424,6 +445,7 @@
       <div class="hud-box">
         <span class="hud-label">SCORE</span>
         <span id="score-val" class="hud-value">0</span>
+        <span class="hud-subvalue">BEST: <span id="hud-best-val">0</span></span>
       </div>
     </div>
 
@@ -454,27 +476,10 @@
     <!-- 곡/난이도 선택 화면 (Start Screen) -->
     <div id="start-screen" class="overlay">
       <h1 class="title">NEON RHYTHM</h1>
-      <p class="subtitle">원하는 난이도의 곡을 선택하고 시작하세요!<br>터치, 마우스 클릭 또는 Esc 제외 키보드 지원</p>
+      <div class="subtitle">원하는 난이도의 곡을 선택하고 시작하세요!<br>터치, 마우스 클릭 또는 Esc 제외 키보드 지원</div>
 
-      <div class="song-list">
-        <div class="song-card selected" data-song="0">
-          <div class="song-info">
-            <h3>1. Electronic Pulse <span class="diff-tag diff-easy">EASY</span></h3>
-            <p>입문자 추천 (BPM 120)</p>
-          </div>
-        </div>
-        <div class="song-card" data-song="1">
-          <div class="song-info">
-            <h3>2. Cyber Neon Dash <span class="diff-tag diff-normal">NORMAL</span></h3>
-            <p>빠른 비트와 리듬감 (BPM 140)</p>
-          </div>
-        </div>
-        <div class="song-card" data-song="2">
-          <div class="song-info">
-            <h3>3. Hyper Drive <span class="diff-tag diff-hard">HARD</span></h3>
-            <p>초고속 극한 난이도 (BPM 165)</p>
-          </div>
-        </div>
+      <div class="song-list" style="max-height: 380px; overflow-y: auto; padding-right: 5px;">
+        <!-- 난이도 21개 생성 대상 -->
       </div>
 
       <button id="start-btn" class="btn">게임 시작</button>
@@ -498,6 +503,7 @@
       <div class="final-score-box">
         <div class="final-score-title">TOTAL SCORE</div>
         <div id="final-score" class="final-score-num">0</div>
+        <div style="font-size: 0.85rem; color: #ffcc00; margin-bottom: 8px;">BEST SCORE: <span id="final-best-score">0</span></div>
 
         <div class="stats-row">
           <div class="stat-item">
@@ -521,11 +527,39 @@
 
       <button id="restart-btn" class="btn">다시 하기</button>
     </div>
+
+    <!-- 저장 안내 문구 -->
+    <div class="storage-notice">기록은 이 브라우저에만 저장됩니다</div>
   </div>
 
   <script>
     // [규격] 필수 식별 상수 정의
     const GAME_ID = 'my-game';
+
+    // ==========================================
+    // [최고 점수 저장 및 로드 로직 모음]
+    // ==========================================
+    function loadBest() {
+      const savedBest = localStorage.getItem('best_' + GAME_ID);
+      const bestScore = savedBest ? parseInt(savedBest, 10) : 0;
+      
+      const hudBestEl = document.getElementById('hud-best-val');
+      if (hudBestEl) {
+        hudBestEl.textContent = bestScore.toLocaleString();
+      }
+      return bestScore;
+    }
+
+    function saveScore(currentScore) {
+      const currentBest = loadBest();
+      if (currentScore > currentBest) {
+        localStorage.setItem('best_' + GAME_ID, currentScore.toString());
+        loadBest(); // UI 갱신
+        return currentScore;
+      }
+      return currentBest;
+    }
+    // ==========================================
 
     // 게임 세팅 및 상태 변수
     const GAME_DURATION = 180; // 3분 (180초) 제한시간
@@ -539,19 +573,85 @@
     let animationFrameId = null;
     let lastTimestamp = 0;
 
+    // 초기 최고 점수 로드
+    window.addEventListener('DOMContentLoaded', () => {
+      loadBest();
+    });
+
     // 레인별 누름 상태
     const lanePressed = [false, false, false, false];
 
     // 통계 데이터
     let stats = { perfect: 0, great: 0, good: 0, miss: 0 };
 
-    // 곡/난이도 데이터 (단타와 홀드는 동시 출현 금지)
-    const SONGS = [
-      { name: "Electronic Pulse", bpm: 120, baseFreq: 220, density: 0.6, holdChance: 0.2 },
-      { name: "Cyber Neon Dash", bpm: 140, baseFreq: 293, density: 0.75, holdChance: 0.3 },
-      { name: "Hyper Drive", bpm: 165, baseFreq: 329, density: 0.95, holdChance: 0.35 }
+    // 21개 난이도 곡 데이터 세트 생성
+    const songTitles = [
+      "Beginner Pulse", "First Wave", "Neon Glow", "Rhythm Starter", "Cyber Breeze",
+      "Digital Steps", "Electro Synth", "Beat Runner", "Cyber Neon Dash", "Future Sound",
+      "Overdrive", "Sonic Surge", "Quantum Leap", "Hyper Velocity", "Hyper Drive",
+      "Data Stream", "Virtual Eclipse", "Cyber Inferno", "Apex Predator", "Chaos Core", "Mastery Limit"
     ];
+
+    const SONGS = Array.from({ length: 21 }, (_, index) => {
+      const level = index + 1;
+      let diffClass = "diff-easy";
+      let diffLabel = `LV.${level} EASY`;
+      
+      if (level > 14) {
+        diffClass = "diff-hard";
+        diffLabel = `LV.${level} HARD`;
+      } else if (level > 7) {
+        diffClass = "diff-normal";
+        diffLabel = `LV.${level} NORMAL`;
+      }
+
+      // 난이도에 따른 스탯 스케일링
+      const bpm = 100 + (index * 4); // 100 ~ 180 BPM
+      const density = 0.5 + (index * 0.03); // 0.5 ~ 1.10
+      const holdChance = Math.min(0.15 + (index * 0.015), 0.45); // 0.15 ~ 0.45
+      const baseFreq = 200 + (index * 15);
+
+      return {
+        id: index,
+        title: `${level}. ${songTitles[index]}`,
+        level: level,
+        bpm: bpm,
+        baseFreq: baseFreq,
+        density: density,
+        holdChance: holdChance,
+        diffClass: diffClass,
+        diffLabel: diffLabel
+      };
+    });
+
     let selectedSongIndex = 0;
+
+    // DOM 선택 및 곡 목록 동적 생성
+    const songListContainer = document.querySelector('.song-list');
+
+    function renderSongList() {
+      songListContainer.innerHTML = '';
+      SONGS.forEach((song, idx) => {
+        const card = document.createElement('div');
+        card.className = `song-card ${idx === selectedSongIndex ? 'selected' : ''}`;
+        card.dataset.song = idx;
+        card.innerHTML = `
+          <div class="song-info">
+            <h3>${song.title} <span class="diff-tag ${song.diffClass}">${song.diffLabel}</span></h3>
+            <p>속도 및 스피드감 (BPM ${song.bpm})</p>
+          </div>
+        `;
+        card.addEventListener('click', () => {
+          document.querySelectorAll('.song-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          selectedSongIndex = idx;
+        });
+        songListContainer.appendChild(card);
+      });
+    }
+
+    // 초기 곡 목록 출력
+    renderSongList();
 
     // 노트 관리
     let activeNotes = [];
@@ -576,7 +676,6 @@
     const quitBtn = document.getElementById('quit-btn');
     const restartBtn = document.getElementById('restart-btn');
     const trackBtns = document.querySelectorAll('.track-btn');
-    const songCards = document.querySelectorAll('.song-card');
 
     // Web Audio API
     let audioCtx = null;
@@ -606,15 +705,6 @@
         osc.stop(audioCtx.currentTime + duration);
       } catch(e) {}
     }
-
-    // 곡 선택 이벤트
-    songCards.forEach((card) => {
-      card.addEventListener('click', () => {
-        songCards.forEach(c => c.classList.remove('selected'));
-        card.classList.add('selected');
-        selectedSongIndex = parseInt(card.dataset.song);
-      });
-    });
 
     // 시작/재시작 핸들러
     startBtn.addEventListener('click', () => {
@@ -705,6 +795,12 @@
       const seconds = timeLeft % 60;
       timeValEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
       scoreValEl.textContent = score.toLocaleString();
+
+      // 최고 점수를 돌파할 때 실시간으로 최고 점수 업데이트
+      const currentBest = loadBest();
+      if (score > currentBest) {
+        saveScore(score);
+      }
     }
 
     // 메인 루프
@@ -729,7 +825,7 @@
       const isHold = Math.random() < song.holdChance;
       const noteEl = document.createElement('div');
       
-      const speed = 0.55 + (selectedSongIndex * 0.18);
+      const speed = 0.45 + (song.level * 0.025); // 난이도(1~21)에 따른 속도 증가
       let noteObj = {
         id: noteIdCounter++,
         lane: lane,
@@ -742,7 +838,7 @@
       };
 
       if (isHold) {
-        const height = 120 + Math.random() * 80;
+        const height = 110 + Math.random() * 70;
         noteEl.className = 'hold-note';
         noteEl.style.height = `${height}px`;
         noteEl.style.left = `${lane * 25 + 1.5}%`;
@@ -1044,7 +1140,11 @@
     }
 
     function gameOver(finalScore) {
+      // 점수 저장 및 최고 점수 산출
+      const bestScore = saveScore(finalScore);
+
       finalScoreEl.textContent = finalScore.toLocaleString();
+      document.getElementById('final-best-score').textContent = bestScore.toLocaleString();
       document.getElementById('stat-maxcombo').textContent = maxCombo;
       document.getElementById('stat-perfect').textContent = stats.perfect;
       document.getElementById('stat-great').textContent = stats.great;
