@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘 할 일</title>
+    <style>
+        /* 기본 리셋 및 스타일링 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f3f4f6;
+            color: #1f2937;
+            display: flex;
+            justify-content: center;
+            padding: 20px 12px;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px 20px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: fit-content;
+        }
+
+        /* 날짜 헤더 */
+        .header-date {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #111827;
+            text-align: center;
+        }
+
+        /* 진행도 (진행률 바 & 개수) */
+        .progress-section {
+            background-color: #f9fafb;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #4b5563;
+            margin-bottom: 8px;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 10px;
+            background-color: #e5e7eb;
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background-color: #2563eb;
+            border-radius: 9999px;
+            transition: width 0.3s ease;
+        }
+
+        /* 카테고리 필터 탭 */
+        .category-tabs {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: none; /* Firefox */
+        }
+        .category-tabs::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+        .tab-btn {
+            background-color: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #4b5563;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        .tab-btn.active {
+            background-color: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+        }
+
+        /* 입력 폼 */
+        .input-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .category-select {
+            padding: 10px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            outline: none;
+            background-color: #ffffff;
+            color: #374151;
+            cursor: pointer;
+        }
+
+        .text-input {
+            flex: 1;
+            padding: 12px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .text-input:focus, .category-select:focus {
+            border-color: #2563eb;
+        }
+
+        .media-btn-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 12px;
+            background-color: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            cursor: pointer;
+            color: #4b5563;
+            transition: background-color 0.2s;
+            font-size: 1.1rem;
+        }
+
+        .media-btn-label:hover {
+            background-color: #e5e7eb;
+        }
+
+        .add-btn {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 0 18px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background-color 0.2s;
+        }
+
+        .add-btn:hover {
+            background-color: #1d4ed8;
+        }
+
+        /* 미디어 첨부 파일 미리보기 영역 (작성 시) */
+        .preview-container {
+            position: relative;
+            display: none;
+            width: fit-content;
+            max-width: 100%;
+        }
+
+        .preview-media {
+            max-height: 120px;
+            max-width: 100%;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            object-fit: cover;
+        }
+
+        .remove-preview-btn {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 컨트롤 영역 (완료한 것 치우기) */
+        .action-row {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .clear-btn {
+            background: none;
+            border: none;
+            color: #6b7280;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .clear-btn:hover {
+            color: #374151;
+        }
+
+        /* 할 일 목록 (카드 스타일) */
+        .todo-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            list-style: none;
+        }
+
+        .todo-card {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        .todo-card.completed {
+            background-color: #f9fafb;
+            border-color: #f3f4f6;
+        }
+
+        .checkbox-custom {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #d1d5db;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-top: 2px;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .todo-card.completed .checkbox-custom {
+            background-color: #2563eb;
+            border-color: #2563eb;
+        }
+
+        .checkbox-custom::after {
+            content: '✓';
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            display: none;
+        }
+
+        .todo-card.completed .checkbox-custom::after {
+            display: block;
+        }
+
+        .todo-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            word-break: break-word;
+        }
+
+        .todo-header-info {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .category-badge {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 12px;
+            line-height: 1.4;
+        }
+
+        /* 카테고리별 배지 색상 */
+        .badge-work { background-color: #dbeafe; color: #1e40af; }
+        .badge-personal { background-color: #fce7f3; color: #9d174d; }
+        .badge-shopping { background-color: #fef3c7; color: #92400e; }
+        .badge-health { background-color: #dcfce7; color: #166534; }
+        .badge-etc { background-color: #f3f4f6; color: #4b5563; }
+
+        .todo-text {
+            font-size: 0.95rem;
+            line-height: 1.4;
+            color: #1f2937;
+        }
+
+        .todo-card.completed .todo-text {
+            text-decoration: line-through;
+            color: #9ca3af;
+        }
+
+        /* 첨부된 미디어 스타일 */
+        .todo-media {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            margin-top: 4px;
+            object-fit: contain;
+            background-color: #000000;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            font-size: 1.2rem;
+            cursor: pointer;
+            line-height: 1;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: color 0.2s;
+        }
+
+        .delete-btn:hover {
+            color: #ef4444;
+        }
+
+        /* 목록 빈 상태 */
+        .empty-state {
+            text-align: center;
+            padding: 30px 10px;
+            color: #9ca3af;
+            font-size: 0.95rem;
+            display: none;
+        }
+
+        /* 하단 안내 문구 */
+        .footer-notice {
+            margin-top: auto;
+            text-align: center;
+            font-size: 0.78rem;
+            color: #9ca3af;
+            padding-top: 10px;
+            border-top: 1px solid #f3f4f6;
+        }
+
+        /* 파일 태그 숨기기 */
+        #media-input {
+            display: none;
+        }
+
+        /* AI 어시스턴트 플로팅 버튼 & 채팅창 스타일 */
+        .ai-fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            color: white;
+            border: none;
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            z-index: 100;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .ai-fab:hover {
+            transform: scale(1.08);
+            box-shadow: 0 14px 20px -3px rgba(37, 99, 235, 0.5);
+        }
+
+        .ai-chat-window {
+            position: fixed;
+            bottom: 90px;
+            right: 24px;
+            width: calc(100vw - 48px);
+            max-width: 360px;
+            height: 480px;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 100;
+            border: 1px solid #e5e7eb;
+        }
+
+        .ai-chat-window.open {
+            display: flex;
+        }
+
+        .ai-chat-header {
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            color: white;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .ai-api-key-config {
+            background-color: #f0f4ff;
+            padding: 8px 12px;
+            border-bottom: 1px solid #e0e7ff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.78rem;
+        }
+
+        .ai-api-key-input {
+            flex: 1;
+            padding: 4px 8px;
+            border: 1px solid #c7d2fe;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            outline: none;
+        }
+
+        .ai-chat-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .ai-chat-messages {
+            flex: 1;
+            padding: 14px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background-color: #f9fafb;
+            font-size: 0.88rem;
+        }
+
+        .chat-bubble {
+            max-width: 85%;
+            padding: 10px 12px;
+            border-radius: 12px;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .chat-bubble.user {
+            align-self: flex-end;
+            background-color: #2563eb;
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        .chat-bubble.ai {
+            align-self: flex-start;
+            background-color: #ffffff;
+            color: #1f2937;
+            border: 1px solid #e5e7eb;
+            border-bottom-left-radius: 2px;
+        }
+
+        .ai-chat-input-area {
+            display: flex;
+            padding: 10px;
+            background-color: #ffffff;
+            border-top: 1px solid #e5e7eb;
+            gap: 6px;
+        }
+
+        .ai-chat-input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .ai-chat-input:focus {
+            border-color: #2563eb;
+        }
+
+        .ai-send-btn {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .ai-suggest-btn {
+            background-color: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            color: #4b5563;
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        .ai-suggest-btn:hover {
+            background-color: #e5e7eb;
+        }
+
+        .ai-quick-actions {
+            display: flex;
+            gap: 6px;
+            padding: 8px 14px 0 14px;
+            overflow-x: auto;
+            background-color: #f9fafb;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 1. 오늘 날짜 -->
+        <div class="header-date" id="current-date">----년 --월 --일 -요일</div>
+
+        <!-- 2. 진행도 및 막대 그래프 -->
+        <div class="progress-section">
+            <div class="progress-info">
+                <span>오늘의 달성률</span>
+                <span id="progress-text">0 / 0</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progress-bar"></div>
+            </div>
+        </div>
+
+        <!-- 2.5 카테고리 필터 탭 -->
+        <div class="category-tabs" id="category-tabs">
+            <button class="tab-btn active" data-category="all">전체</button>
+            <button class="tab-btn" data-category="work">🏢 업무</button>
+            <button class="tab-btn" data-category="personal">🏠 개인</button>
+            <button class="tab-btn" data-category="shopping">🛒 쇼핑</button>
+            <button class="tab-btn" data-category="health">🎯 운동/건강</button>
+            <button class="tab-btn" data-category="etc">💡 기타</button>
+        </div>
+
+        <!-- 3. 입력칸, 사진/영상 첨부 버튼, 추가 버튼 -->
+        <div class="input-form">
+            <div class="input-row">
+                <select id="category-select" class="category-select">
+                    <option value="personal">🏠 개인</option>
+                    <option value="work">🏢 업무</option>
+                    <option value="shopping">🛒 쇼핑</option>
+                    <option value="health">🎯 운동</option>
+                    <option value="etc">💡 기타</option>
+                </select>
+                <input type="text" id="todo-input" class="text-input" placeholder="할 일을 입력하세요..." autocomplete="off">
+                <!-- 파일 첨부 클립 아이콘 -->
+                <label for="media-input" class="media-btn-label" title="사진 또는 영상 첨부">
+                    📷
+                </label>
+                <input type="file" id="media-input" accept="image/*,video/*">
+                <button class="add-btn" id="add-btn">추가</button>
+            </div>
+
+            <!-- 미디어 선택 시 미리보기 영역 -->
+            <div class="preview-container" id="preview-container">
+                <div id="preview-wrapper"></div>
+                <button type="button" class="remove-preview-btn" id="remove-preview-btn">✕</button>
+            </div>
+        </div>
+
+        <!-- 4. 컨트롤 (완료한 것 치우기) -->
+        <div class="action-row">
+            <button class="clear-btn" id="clear-completed-btn">완료한 것 치우기</button>
+        </div>
+
+        <!-- 5. 할 일 목록 카드 -->
+        <ul class="todo-list" id="todo-list"></ul>
+
+        <!-- 목록이 비어있을 때 안내 문구 -->
+        <div class="empty-state" id="empty-state">
+            등록된 할 일이 없습니다.<br>오늘 해야 할 일을 추가해 보세요!
+        </div>
+
+        <!-- 6. 하단 데이터 저장 안내 문구 -->
+        <div class="footer-notice">
+            이 목록은 지금 쓰는 브라우저에만 저장됩니다.
+        </div>
+    </div>
+
+    <!-- AI 어시스턴트 플로팅 버튼 & 대화 창 -->
+    <button class="ai-fab" id="ai-fab" title="AI 어시스턴트 열기">✨</button>
+
+    <div class="ai-chat-window" id="ai-chat-window">
+        <div class="ai-chat-header">
+            <span>🤖 오늘 할 일 AI 도우미</span>
+            <button class="ai-chat-close" id="ai-chat-close">✕</button>
+        </div>
+        <div class="ai-api-key-config">
+            <span>🔑 API Key:</span>
+            <input type="password" id="ai-api-key-input" class="ai-api-key-input" placeholder="Gemini API Key 입력 (선택)">
+        </div>
+        <div class="ai-quick-actions">
+            <button class="ai-suggest-btn" id="ai-btn-analyze">💡 내 할 일 분석</button>
+            <button class="ai-suggest-btn" id="ai-btn-recommend">📝 오늘 할 일 추천</button>
+        </div>
+        <div class="ai-chat-messages" id="ai-chat-messages">
+            <div class="chat-bubble ai">안녕하세요! 할 일 작성에 도움이 필요하거나 오늘 일정을 정리하고 싶다면 무엇이든 물어보세요! 😊<br><br><small>※ AI 대화 이용을 위해 상단에 Google AI Studio의 Gemini API Key를 입력할 수 있습니다.</small></div>
+        </div>
+        <div class="ai-chat-input-area">
+            <input type="text" id="ai-chat-input" class="ai-chat-input" placeholder="AI에게 물어보기..." autocomplete="off">
+            <button class="ai-send-btn" id="ai-send-btn">전송</button>
+        </div>
+    </div>
+
+    <script>
+        // Data State
+        let todos = [];
+        let currentMediaData = null; // { type: 'image' | 'video', url: string (Base64) }
+        let currentFilter = 'all';
+
+        const CATEGORY_MAP = {
+            work: { label: '🏢 업무', class: 'badge-work' },
+            personal: { label: '🏠 개인', class: 'badge-personal' },
+            shopping: { label: '🛒 쇼핑', class: 'badge-shopping' },
+            health: { label: '🎯 운동', class: 'badge-health' },
+            etc: { label: '💡 기타', class: 'badge-etc' }
+        };
+
+        // DOM 요소
+        const currentDateEl = document.getElementById('current-date');
+        const progressTextEl = document.getElementById('progress-text');
+        const progressBarEl = document.getElementById('progress-bar');
+        const categorySelect = document.getElementById('category-select');
+        const categoryTabs = document.getElementById('category-tabs');
+        const todoInput = document.getElementById('todo-input');
+        const mediaInput = document.getElementById('media-input');
+        const addBtn = document.getElementById('add-btn');
+        const todoListEl = document.getElementById('todo-list');
+        const emptyStateEl = document.getElementById('empty-state');
+        const clearCompletedBtn = document.getElementById('clear-completed-btn');
+        const previewContainer = document.getElementById('preview-container');
+        const previewWrapper = document.getElementById('preview-wrapper');
+        const removePreviewBtn = document.getElementById('remove-preview-btn');
+
+        // AI 관련 DOM 요소
+        const aiFab = document.getElementById('ai-fab');
+        const aiChatWindow = document.getElementById('ai-chat-window');
+        const aiChatClose = document.getElementById('ai-chat-close');
+        const aiApiKeyInput = document.getElementById('ai-api-key-input');
+        const aiChatMessages = document.getElementById('ai-chat-messages');
+        const aiChatInput = document.getElementById('ai-chat-input');
+        const aiSendBtn = document.getElementById('ai-send-btn');
+        const aiBtnAnalyze = document.getElementById('ai-btn-analyze');
+        const aiBtnRecommend = document.getElementById('ai-btn-recommend');
+
+        // 초기화
+        window.onload = function() {
+            displayDate();
+            loadTodos();
+            initTabListeners();
+            render();
+            initAIListeners();
+        };
+
+        // 탭 이벤트 리스너
+        function initTabListeners() {
+            categoryTabs.addEventListener('click', (e) => {
+                if (e.target.classList.contains('tab-btn')) {
+                    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                    currentFilter = e.target.dataset.category;
+                    render();
+                }
+            });
+        }
+
+        // 1. 날짜 표시 (한국어 형식)
+        function displayDate() {
+            const now = new Date();
+            const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+            const date = now.getDate();
+            const dayName = days[now.getDay()];
+
+            currentDateEl.textContent = `${year}년 ${month}월 ${date}일 ${dayName}`;
+        }
+
+        // 2. localStorage 로드 및 저장
+        function loadTodos() {
+            try {
+                const saved = localStorage.getItem('my_daily_todos');
+                if (saved) {
+                    todos = JSON.parse(saved);
+                }
+            } catch (e) {
+                console.error("로컬 스토리지 읽기 실패", e);
+                todos = [];
+            }
+        }
+
+        function saveTodos() {
+            try {
+                localStorage.setItem('my_daily_todos', JSON.stringify(todos));
+            } catch (e) {
+                alert("저장 공간이 부족하여 첨부파일이 저장되지 않을 수 있습니다.");
+            }
+        }
+
+        // 3. 미디어 파일 첨부 처리 (미리보기)
+        mediaInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // 로컬 스토리지 크기 제한(약 5MB)을 고려한 용량 체크 (약 3MB 제한)
+            if (file.size > 3 * 1024 * 1024) {
+                alert("브라우저 저장소 제한으로 인해 3MB 이하의 파일만 첨부할 수 있습니다.");
+                mediaInput.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const isVideo = file.type.startsWith('video/');
+                currentMediaData = {
+                    type: isVideo ? 'video' : 'image',
+                    url: event.target.result
+                };
+                showPreview();
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function showPreview() {
+            if (!currentMediaData) {
+                previewContainer.style.display = 'none';
+                previewWrapper.innerHTML = '';
+                return;
+            }
+
+            previewWrapper.innerHTML = '';
+            if (currentMediaData.type === 'image') {
+                const img = document.createElement('img');
+                img.src = currentMediaData.url;
+                img.className = 'preview-media';
+                previewWrapper.appendChild(img);
+            } else {
+                const video = document.createElement('video');
+                video.src = currentMediaData.url;
+                video.className = 'preview-media';
+                video.controls = true;
+                previewWrapper.appendChild(video);
+            }
+            previewContainer.style.display = 'block';
+        }
+
+        removePreviewBtn.addEventListener('click', function() {
+            currentMediaData = null;
+            mediaInput.value = '';
+            showPreview();
+        });
+
+        // 4. 할 일 추가하기
+        function addTodo() {
+            const text = todoInput.value.trim();
+            if (!text && !currentMediaData) {
+                todoInput.focus();
+                return;
+            }
+
+            const category = categorySelect.value || 'personal';
+
+            const newTodo = {
+                id: Date.now(),
+                text: text,
+                category: category,
+                completed: false,
+                media: currentMediaData ? { ...currentMediaData } : null
+            };
+
+            todos.push(newTodo);
+            saveTodos();
+
+            // 입력 폼 초기화
+            todoInput.value = '';
+            mediaInput.value = '';
+            currentMediaData = null;
+            showPreview();
+
+            render();
+        }
+
+        addBtn.addEventListener('click', addTodo);
+        todoInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addTodo();
+            }
+        });
+
+        // 5. 할 일 상태 토글 (완료/미완료)
+        function toggleTodo(id) {
+            todos = todos.map(todo => {
+                if (todo.id === id) {
+                    return { ...todo, completed: !todo.completed };
+                }
+                return todo;
+            });
+            saveTodos();
+            render();
+        }
+
+        // 6. 항목 삭제
+        function deleteTodo(id) {
+            todos = todos.filter(todo => todo.id !== id);
+            saveTodos();
+            render();
+        }
+
+        // 7. 완료한 항목 한 번에 정리
+        clearCompletedBtn.addEventListener('click', function() {
+            todos = todos.filter(todo => !todo.completed);
+            saveTodos();
+            render();
+        });
+
+        // 8. 화면 렌더링 (목록 & 진행도 바)
+        function render() {
+            todoListEl.innerHTML = '';
+
+            // 필터링 적용
+            const filteredTodos = todos.filter(todo => {
+                if (currentFilter === 'all') return true;
+                return (todo.category || 'personal') === currentFilter;
+            });
+
+            if (filteredTodos.length === 0) {
+                emptyStateEl.style.display = 'block';
+            } else {
+                emptyStateEl.style.display = 'none';
+
+                filteredTodos.forEach(todo => {
+                    const li = document.createElement('li');
+                    li.className = `todo-card ${todo.completed ? 'completed' : ''}`;
+
+                    // 체크박스
+                    const checkbox = document.createElement('div');
+                    checkbox.className = 'checkbox-custom';
+                    checkbox.addEventListener('click', () => toggleTodo(todo.id));
+
+                    // 내용 컨테이너
+                    const content = document.createElement('div');
+                    content.className = 'todo-content';
+
+                    // 카테고리 헤더
+                    const headerInfo = document.createElement('div');
+                    headerInfo.className = 'todo-header-info';
+                    
+                    const catKey = todo.category && CATEGORY_MAP[todo.category] ? todo.category : 'etc';
+                    const catInfo = CATEGORY_MAP[catKey];
+                    
+                    const badge = document.createElement('span');
+                    badge.className = `category-badge ${catInfo.class}`;
+                    badge.textContent = catInfo.label;
+                    headerInfo.appendChild(badge);
+                    content.appendChild(headerInfo);
+
+                    if (todo.text) {
+                        const textEl = document.createElement('span');
+                        textEl.className = 'todo-text';
+                        textEl.textContent = todo.text;
+                        content.appendChild(textEl);
+                    }
+
+                    // 사진/영상 미디어가 있는 경우
+                    if (todo.media) {
+                        if (todo.media.type === 'image') {
+                            const img = document.createElement('img');
+                            img.src = todo.media.url;
+                            img.className = 'todo-media';
+                            content.appendChild(img);
+                        } else if (todo.media.type === 'video') {
+                            const video = document.createElement('video');
+                            video.src = todo.media.url;
+                            video.className = 'todo-media';
+                            video.controls = true;
+                            content.appendChild(video);
+                        }
+                    }
+
+                    // 삭제 버튼
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.innerHTML = '✕';
+                    deleteBtn.title = '삭제';
+                    deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
+
+                    li.appendChild(checkbox);
+                    li.appendChild(content);
+                    li.appendChild(deleteBtn);
+
+                    todoListEl.appendChild(li);
+                });
+            }
+
+            // 전체 진행도 계산 및 막대 업데이트
+            const total = todos.length;
+            const completedCount = todos.filter(t => t.completed).length;
+            const percentage = total === 0 ? 0 : Math.round((completedCount / total) * 100);
+
+            progressTextEl.textContent = `${completedCount} / ${total}`;
+            progressBarEl.style.width = `${percentage}%`;
+        }
+
+        // 9. AI 어시스턴트 기능
+        function initAIListeners() {
+            // 저장된 API Key 불러오기
+            const savedApiKey = localStorage.getItem('gemini_api_key');
+            if (savedApiKey) {
+                aiApiKeyInput.value = savedApiKey;
+            }
+
+            aiApiKeyInput.addEventListener('change', () => {
+                localStorage.setItem('gemini_api_key', aiApiKeyInput.value.trim());
+            });
+
+            aiFab.addEventListener('click', () => {
+                aiChatWindow.classList.toggle('open');
+            });
+
+            aiChatClose.addEventListener('click', () => {
+                aiChatWindow.classList.remove('open');
+            });
+
+            aiSendBtn.addEventListener('click', handleUserAISend);
+            aiChatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleUserAISend();
+            });
+
+            aiBtnAnalyze.addEventListener('click', () => {
+                const todoTexts = todos.map(t => {
+                    const catLabel = CATEGORY_MAP[t.category]?.label || '기타';
+                    return `[${catLabel}] ${t.completed ? '[완료]' : '[미완료]'} ${t.text || '(미디어 첨부됨)'}`;
+                }).join('\n');
+                const prompt = `현재 내 '오늘 할 일' 카테고리별 목록이야:\n${todoTexts || '현재 등록된 할 일이 없음'}\n\n이 목록을 기반으로 카테고리 균형이나 우선순위 조언, 피드백, 응원의 한마디를 짧고 친절하게 해줘.`;
+                sendToGemini(prompt, "현재 내 할 일 목록을 분석해줘.");
+            });
+
+            aiBtnRecommend.addEventListener('click', () => {
+                const prompt = "오늘 하루 알차게 보내기 위해 업무, 개인, 건강 등의 카테고리별로 추천하는 유용한 할 일 3가지를 정리해서 보여줘.";
+                sendToGemini(prompt, "오늘 할 일을 추천해줘.");
+            });
+        }
+
+        function appendChatMessage(sender, text) {
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${sender}`;
+            bubble.innerHTML = text;
+            aiChatMessages.appendChild(bubble);
+            aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+            return bubble;
+        }
+
+        async function handleUserAISend() {
+            const userText = aiChatInput.value.trim();
+            if (!userText) return;
+
+            aiChatInput.value = '';
+            sendToGemini(userText, userText);
+        }
+
+        async function sendToGemini(systemOrFullPrompt, displayUserText) {
+            appendChatMessage('user', displayUserText);
+
+            // 1. API Key 확인
+            const userKey = aiApiKeyInput.value.trim();
+            const apiKey = userKey || (typeof __gemini_api_key !== 'undefined' ? __gemini_api_key : "");
+
+            // API Key가 없는 경우 친절한 안내 메시지 출력
+            if (!apiKey) {
+                const guideText = `⚠️ **Gemini API Key가 필요합니다**\n\nGoogle AI 정책에 따라 AI 기능을 사용하려면 무료 API Key가 필요합니다.\n\n1. 상단 **🔑 API Key** 칸에 키를 입력해 주세요.\n2. 키가 없으시면 [Google AI Studio](https://aistudio.google.com/app/apikey)에서 무료로 바로 발급받으실 수 있습니다.`;
+                appendChatMessage('ai', guideText);
+                return;
+            }
+
+            const loadingBubble = appendChatMessage('ai', '생각 중...');
+
+            try {
+                // 최신 gemini-3-flash-preview 모델 사용
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const systemInstruction = "당신은 사용자의 하루를 돕는 똑똑하고 친절한 AI 어시스턴트입니다. 항상 긍정적이고 핵심 위주로 한국어로 답변하세요.";
+
+                // Gemini API 페이로드 구성
+                const payload = {
+                    contents: [{
+                        role: "user",
+                        parts: [{ text: systemOrFullPrompt }]
+                    }],
+                    systemInstruction: {
+                        parts: [{ text: systemInstruction }]
+                    }
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    console.error("Gemini API Error Response:", errData);
+                    let errMessage = "AI 응답을 가져오지 못했습니다.";
+                    if (response.status === 400 || response.status === 403) {
+                        errMessage = "🔑 입력하신 API Key가 유효하지 않거나 권한이 없습니다. 상단 입력란의 API Key를 다시 확인해 주세요.";
+                    } else if (response.status === 404) {
+                        errMessage = "요청한 API 모델을 찾을 수 없습니다. API Key 설정을 확인해 주세요.";
+                    } else if (response.status === 429) {
+                        errMessage = "호출 한도가 초과되었습니다. 잠시 후 다시 시도해 주세요.";
+                    }
+                    loadingBubble.textContent = errMessage;
+                    return;
+                }
+
+                const data = await response.json();
+                const candidate = data.candidates?.[0];
+                const aiResponseText = candidate?.content?.parts?.[0]?.text;
+
+                if (aiResponseText) {
+                    loadingBubble.textContent = aiResponseText;
+                } else {
+                    loadingBubble.textContent = "답변을 생성하지 못했습니다. 다시 질문해 주세요.";
+                }
+            } catch (err) {
+                console.error("Gemini API 호출 오류:", err);
+                loadingBubble.textContent = "오류가 발생했습니다. 네트워크 연결 상태 또는 API Key 설정을 확인해 주세요.";
+            }
+
+            aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+        }
+    </script>
+</body>
+</html>
