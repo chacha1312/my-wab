@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>네온 리듬 마스터 (Rhythm Master)</title>
+  <style>
+    /* 글로벌 CSS 정의 및 모바일 최적화 */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    body {
+      background-color: #0d0f18;
+      color: #ffffff;
+      font-family: 'Pretendard', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* 게임 전체 컨테이너 */
+    #game-container {
+      width: 100%;
+      max-width: 480px;
+      height: 100vh;
+      max-height: 850px;
+      background: linear-gradient(180deg, #121526 0%, #080910 100%);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: 0 0 30px rgba(0, 255, 204, 0.15);
+      border-left: 1px solid rgba(255, 255, 255, 0.05);
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* 상단 HUD (시간 & 점수 & 일시정지 버튼) */
+    #hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 18px;
+      background: rgba(15, 20, 35, 0.85);
+      backdrop-filter: blur(8px);
+      border-bottom: 2px solid #2a3250;
+      z-index: 10;
+    }
+
+    .hud-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .hud-label {
+      font-size: 0.75rem;
+      color: #8a99b5;
+      font-weight: bold;
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+    }
+
+    .hud-value {
+      font-size: 1.8rem;
+      font-weight: 900;
+      font-family: monospace;
+      color: #00ffcc;
+      text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+    }
+
+    #score-val {
+      color: #ff007f;
+      text-shadow: 0 0 10px rgba(255, 0, 127, 0.5);
+    }
+
+    /* 상단 일시정지 버튼 */
+    #pause-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    #pause-btn:active {
+      background: rgba(255, 255, 255, 0.25);
+      transform: scale(0.95);
+    }
+
+    /* 게임 플레이 메인 영역 */
+    #play-area {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 30%, #1a2038 0%, #0d0f18 70%);
+      cursor: pointer;
+    }
+
+    /* 판정 라인 */
+    #hit-line {
+      position: absolute;
+      bottom: 100px;
+      left: 0;
+      width: 100%;
+      height: 12px;
+      background: linear-gradient(90deg, #ff007f, #00ffcc, #ff007f);
+      box-shadow: 0 0 15px #00ffcc;
+      z-index: 2;
+    }
+
+    /* 레인 가이드 */
+    .lane-guide {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 25%;
+      border-right: 1px dashed rgba(255, 255, 255, 0.08);
+    }
+    .lane-guide:nth-child(1) { left: 0%; }
+    .lane-guide:nth-child(2) { left: 25%; }
+    .lane-guide:nth-child(3) { left: 50%; }
+    .lane-guide:nth-child(4) { left: 75%; border-right: none; }
+
+    /* 떨어지는 단타 노트 Style */
+    .note {
+      position: absolute;
+      width: 22%;
+      height: 28px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #00ffcc, #00aaff);
+      box-shadow: 0 0 12px #00ffcc;
+      left: 0;
+      z-index: 3;
+    }
+
+    /* 홀드 노트 (롱노트) Style */
+    .hold-note {
+      position: absolute;
+      width: 22%;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(255, 0, 127, 0.8), rgba(255, 204, 0, 0.8));
+      border: 2px solid #ff007f;
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.6);
+      left: 0;
+      z-index: 3;
+    }
+
+    .hold-note.holding {
+      background: linear-gradient(180deg, #00ffcc, #ff007f);
+      box-shadow: 0 0 25px #00ffcc;
+    }
+
+    /* 판정 텍스트 이펙트 */
+    #feedback-text {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 3rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      pointer-events: none;
+      opacity: 0;
+      transition: transform 0.1s ease-out, opacity 0.25s ease-out;
+      z-index: 8;
+    }
+
+    .perfect { color: #00ffcc; text-shadow: 0 0 20px #00ffcc; }
+    .great { color: #ff007f; text-shadow: 0 0 20px #ff007f; }
+    .good { color: #ffcc00; text-shadow: 0 0 20px #ffcc00; }
+    .miss { color: #888888; text-shadow: 0 0 10px #444444; }
+
+    /* 콤보 표시 */
+    #combo-container {
+      position: absolute;
+      top: 25%;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      pointer-events: none;
+      z-index: 7;
+    }
+
+    #combo-val {
+      font-size: 3.5rem;
+      font-weight: 900;
+      color: #ffffff;
+      text-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+      line-height: 1;
+    }
+
+    #combo-label {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #ff007f;
+      letter-spacing: 2px;
+    }
+
+    /* 하단 터치 버튼 입력 영역 */
+    #button-area {
+      height: 100px;
+      display: flex;
+      background: #080910;
+      border-top: 2px solid #2a3250;
+      z-index: 5;
+    }
+
+    .track-btn {
+      flex: 1;
+      height: 100%;
+      background: linear-gradient(180deg, #1c233d 0%, #121626 100%);
+      border: none;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      outline: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: rgba(255, 255, 255, 0.4);
+      transition: background 0.05s, transform 0.05s;
+    }
+
+    .track-btn:last-child {
+      border-right: none;
+    }
+
+    /* 버튼 클릭/터치 피드백 효과 */
+    .track-btn:active, .track-btn.active {
+      background: linear-gradient(180deg, #ff007f 0%, #aa0055 100%) !important;
+      color: #ffffff !important;
+      box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.5);
+      transform: scale(0.96);
+    }
+
+    /* 화면 Overlays (메뉴, 곡 선택, 결과, 일시정지) */
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(13, 15, 24, 0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 25px;
+      z-index: 20;
+    }
+
+    .title {
+      font-size: 2.3rem;
+      font-weight: 900;
+      text-align: center;
+      margin-bottom: 8px;
+      background: linear-gradient(45deg, #00ffcc, #ff007f);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: #8a99b5;
+      margin-bottom: 20px;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .song-list {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .song-card {
+      background: #1c233d;
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s;
+    }
+
+    .song-card:active, .song-card.selected {
+      border-color: #00ffcc;
+      background: #253054;
+      transform: scale(1.02);
+    }
+
+    .song-info h3 {
+      font-size: 1.05rem;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+
+    .song-info p {
+      font-size: 0.8rem;
+      color: #8a99b5;
+    }
+
+    .diff-tag {
+      font-size: 0.75rem;
+      font-weight: bold;
+      padding: 4px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      margin-left: 6px;
+    }
+
+    .diff-easy { background: rgba(0, 255, 204, 0.15); color: #00ffcc; border: 1px solid #00ffcc; }
+    .diff-normal { background: rgba(255, 204, 0, 0.15); color: #ffcc00; border: 1px solid #ffcc00; }
+    .diff-hard { background: rgba(255, 0, 127, 0.15); color: #ff007f; border: 1px solid #ff007f; }
+
+    /* 범용 버튼 스타일 */
+    .btn-group {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 16px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(90deg, #00ffcc, #00aaff);
+      color: #080910;
+      cursor: pointer;
+      box-shadow: 0 5px 15px rgba(0, 255, 204, 0.3);
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+
+    .btn-secondary {
+      background: linear-gradient(90deg, #2a3250, #1c233d);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: none;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    /* 게임오버 점수판 스타일 */
+    .final-score-box {
+      background: #1c233d;
+      border-radius: 16px;
+      padding: 20px;
+      width: 100%;
+      text-align: center;
+      margin-bottom: 20px;
+      border: 1px solid #2a3250;
+    }
+
+    .final-score-title {
+      font-size: 0.9rem;
+      color: #8a99b5;
+      margin-bottom: 6px;
+    }
+
+    .final-score-num {
+      font-size: 3.2rem;
+      font-weight: 900;
+      color: #00ffcc;
+      text-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
+      margin-bottom: 10px;
+    }
+
+    .stats-row {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 15px;
+      border-top: 1px solid #2a3250;
+      padding-top: 15px;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-name { font-size: 0.75rem; color: #8a99b5; }
+    .stat-val { font-size: 1.1rem; font-weight: bold; margin-top: 2px; }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-container">
+    <!-- 상단 HUD 영역 -->
+    <div id="hud">
+      <div class="hud-box">
+        <span class="hud-label">TIME</span>
+        <span id="time-val" class="hud-value">03:00</span>
+      </div>
+      <button id="pause-btn">일시정지 ❚❚</button>
+      <div class="hud-box">
+        <span class="hud-label">SCORE</span>
+        <span id="score-val" class="hud-value">0</span>
+      </div>
+    </div>
+
+    <!-- 리듬게임 노트 낙하 메인 영역 -->
+    <div id="play-area">
+      <div class="lane-guide"></div>
+      <div class="lane-guide"></div>
+      <div class="lane-guide"></div>
+      <div class="lane-guide"></div>
+
+      <div id="combo-container" class="hidden">
+        <div id="combo-val">0</div>
+        <div id="combo-label">COMBO</div>
+      </div>
+
+      <div id="feedback-text">PERFECT</div>
+      <div id="hit-line"></div>
+    </div>
+
+    <!-- 터치/클릭 입력 버튼 영역 -->
+    <div id="button-area">
+      <button class="track-btn" data-lane="0">1</button>
+      <button class="track-btn" data-lane="1">2</button>
+      <button class="track-btn" data-lane="2">3</button>
+      <button class="track-btn" data-lane="3">4</button>
+    </div>
+
+    <!-- 곡/난이도 선택 화면 (Start Screen) -->
+    <div id="start-screen" class="overlay">
+      <h1 class="title">NEON RHYTHM</h1>
+      <p class="subtitle">원하는 난이도의 곡을 선택하고 시작하세요!<br>터치, 마우스 클릭 또는 Esc 제외 키보드 지원</p>
+
+      <div class="song-list">
+        <div class="song-card selected" data-song="0">
+          <div class="song-info">
+            <h3>1. Electronic Pulse <span class="diff-tag diff-easy">EASY</span></h3>
+            <p>입문자 추천 (BPM 120)</p>
+          </div>
+        </div>
+        <div class="song-card" data-song="1">
+          <div class="song-info">
+            <h3>2. Cyber Neon Dash <span class="diff-tag diff-normal">NORMAL</span></h3>
+            <p>빠른 비트와 리듬감 (BPM 140)</p>
+          </div>
+        </div>
+        <div class="song-card" data-song="2">
+          <div class="song-info">
+            <h3>3. Hyper Drive <span class="diff-tag diff-hard">HARD</span></h3>
+            <p>초고속 극한 난이도 (BPM 165)</p>
+          </div>
+        </div>
+      </div>
+
+      <button id="start-btn" class="btn">게임 시작</button>
+    </div>
+
+    <!-- 일시정지 오버레이 (Pause Screen) -->
+    <div id="pause-screen" class="overlay hidden">
+      <h1 class="title">PAUSED</h1>
+      <p class="subtitle">게임이 일시 정지되었습니다.</p>
+      <div class="btn-group">
+        <button id="resume-btn" class="btn">계속 하기</button>
+        <button id="quit-btn" class="btn btn-secondary">곡 선택으로 나가기</button>
+      </div>
+    </div>
+
+    <!-- 게임 종료 결과 화면 (Result Screen) -->
+    <div id="gameover-screen" class="overlay hidden">
+      <h1 class="title">STAGE CLEAR!</h1>
+      <p class="subtitle">최종 결과 점수입니다</p>
+
+      <div class="final-score-box">
+        <div class="final-score-title">TOTAL SCORE</div>
+        <div id="final-score" class="final-score-num">0</div>
+
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="stat-name">MAX COMBO</span>
+            <span id="stat-maxcombo" class="stat-val" style="color: #00ffcc;">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-name">PERFECT</span>
+            <span id="stat-perfect" class="stat-val" style="color: #00ffcc;">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-name">GREAT</span>
+            <span id="stat-great" class="stat-val" style="color: #ff007f;">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-name">MISS</span>
+            <span id="stat-miss" class="stat-val" style="color: #888888;">0</span>
+          </div>
+        </div>
+      </div>
+
+      <button id="restart-btn" class="btn">다시 하기</button>
+    </div>
+  </div>
+
+  <script>
+    // [규격] 필수 식별 상수 정의
+    const GAME_ID = 'my-game';
+
+    // 게임 세팅 및 상태 변수
+    const GAME_DURATION = 180; // 3분 (180초) 제한시간
+    let score = 0;
+    let combo = 0;
+    let maxCombo = 0;
+    let timeLeft = GAME_DURATION;
+    let gameTimer = null;
+    let isPlaying = false;
+    let isPaused = false;
+    let animationFrameId = null;
+    let lastTimestamp = 0;
+
+    // 레인별 누름 상태
+    const lanePressed = [false, false, false, false];
+
+    // 통계 데이터
+    let stats = { perfect: 0, great: 0, good: 0, miss: 0 };
+
+    // 곡/난이도 데이터 (단타와 홀드는 동시 출현 금지)
+    const SONGS = [
+      { name: "Electronic Pulse", bpm: 120, baseFreq: 220, density: 0.6, holdChance: 0.2 },
+      { name: "Cyber Neon Dash", bpm: 140, baseFreq: 293, density: 0.75, holdChance: 0.3 },
+      { name: "Hyper Drive", bpm: 165, baseFreq: 329, density: 0.95, holdChance: 0.35 }
+    ];
+    let selectedSongIndex = 0;
+
+    // 노트 관리
+    let activeNotes = [];
+    let noteIdCounter = 0;
+    let lastNoteSpawnTime = 0;
+
+    // DOM 요소
+    const timeValEl = document.getElementById('time-val');
+    const scoreValEl = document.getElementById('score-val');
+    const playAreaEl = document.getElementById('play-area');
+    const feedbackTextEl = document.getElementById('feedback-text');
+    const comboContainerEl = document.getElementById('combo-container');
+    const comboValEl = document.getElementById('combo-val');
+    const startScreenEl = document.getElementById('start-screen');
+    const pauseScreenEl = document.getElementById('pause-screen');
+    const gameoverScreenEl = document.getElementById('gameover-screen');
+    const finalScoreEl = document.getElementById('final-score');
+    
+    const startBtn = document.getElementById('start-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const resumeBtn = document.getElementById('resume-btn');
+    const quitBtn = document.getElementById('quit-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const trackBtns = document.querySelectorAll('.track-btn');
+    const songCards = document.querySelectorAll('.song-card');
+
+    // Web Audio API
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playSound(freq, type = 'sine', duration = 0.1, vol = 0.3) {
+      if (!audioCtx || isPaused) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch(e) {}
+    }
+
+    // 곡 선택 이벤트
+    songCards.forEach((card) => {
+      card.addEventListener('click', () => {
+        songCards.forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedSongIndex = parseInt(card.dataset.song);
+      });
+    });
+
+    // 시작/재시작 핸들러
+    startBtn.addEventListener('click', () => {
+      initAudio();
+      startScreenEl.classList.add('hidden');
+      startGame();
+    });
+
+    restartBtn.addEventListener('click', () => {
+      gameoverScreenEl.classList.add('hidden');
+      startScreenEl.classList.remove('hidden');
+    });
+
+    // 일시정지 / 계속하기 / 나가기 핸들러
+    pauseBtn.addEventListener('click', pauseGame);
+    resumeBtn.addEventListener('click', resumeGame);
+    quitBtn.addEventListener('click', quitToMain);
+
+    function pauseGame() {
+      if (!isPlaying || isPaused) return;
+      isPaused = true;
+      clearInterval(gameTimer);
+      pauseScreenEl.classList.remove('hidden');
+    }
+
+    function resumeGame() {
+      if (!isPlaying || !isPaused) return;
+      isPaused = false;
+      pauseScreenEl.classList.add('hidden');
+      startTimer();
+      lastTimestamp = performance.now();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function quitToMain() {
+      isPlaying = false;
+      isPaused = false;
+      clearInterval(gameTimer);
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      
+      pauseScreenEl.classList.add('hidden');
+      gameoverScreenEl.classList.add('hidden');
+      startScreenEl.classList.remove('hidden');
+      clearNotes();
+    }
+
+    function clearNotes() {
+      const existingNotes = playAreaEl.querySelectorAll('.note, .hold-note');
+      existingNotes.forEach(n => n.remove());
+      activeNotes = [];
+    }
+
+    // 게임 초기화 및 시작
+    function startGame() {
+      score = 0;
+      combo = 0;
+      maxCombo = 0;
+      timeLeft = GAME_DURATION;
+      stats = { perfect: 0, great: 0, good: 0, miss: 0 };
+      isPlaying = true;
+      isPaused = false;
+      lanePressed.fill(false);
+      
+      clearNotes();
+      updateHUD();
+      startTimer();
+
+      lastNoteSpawnTime = performance.now();
+      lastTimestamp = performance.now();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function startTimer() {
+      clearInterval(gameTimer);
+      gameTimer = setInterval(() => {
+        if (!isPaused && isPlaying) {
+          timeLeft--;
+          updateHUD();
+          if (timeLeft <= 0) {
+            endGame();
+          }
+        }
+      }, 1000);
+    }
+
+    function updateHUD() {
+      const minutes = Math.floor(timeLeft / 60);
+      const seconds = timeLeft % 60;
+      timeValEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      scoreValEl.textContent = score.toLocaleString();
+    }
+
+    // 메인 루프
+    function gameLoop(timestamp) {
+      if (!isPlaying || isPaused) return;
+
+      const currentSong = SONGS[selectedSongIndex];
+      const spawnInterval = (60 / currentSong.bpm) * 1000 / currentSong.density;
+
+      // 비트에 맞춘 노트 생성
+      if (timestamp - lastNoteSpawnTime > spawnInterval) {
+        spawnNote(currentSong);
+        lastNoteSpawnTime = timestamp;
+      }
+
+      updateNotes();
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function spawnNote(song) {
+      const lane = Math.floor(Math.random() * 4);
+      const isHold = Math.random() < song.holdChance;
+      const noteEl = document.createElement('div');
+      
+      const speed = 0.55 + (selectedSongIndex * 0.18);
+      let noteObj = {
+        id: noteIdCounter++,
+        lane: lane,
+        y: -30,
+        speed: speed,
+        el: noteEl,
+        isHold: isHold,
+        hit: false,
+        holding: false
+      };
+
+      if (isHold) {
+        const height = 120 + Math.random() * 80;
+        noteEl.className = 'hold-note';
+        noteEl.style.height = `${height}px`;
+        noteEl.style.left = `${lane * 25 + 1.5}%`;
+        noteObj.height = height;
+      } else {
+        noteEl.className = 'note';
+        noteEl.style.left = `${lane * 25 + 1.5}%`;
+      }
+
+      playAreaEl.appendChild(noteEl);
+      activeNotes.push(noteObj);
+
+      const freqs = [song.baseFreq, song.baseFreq * 1.25, song.baseFreq * 1.5, song.baseFreq * 2];
+      playSound(freqs[lane], 'triangle', 0.08, 0.1);
+    }
+
+    function updateNotes() {
+      const areaHeight = playAreaEl.clientHeight;
+      const hitLineY = areaHeight - 100;
+
+      for (let i = activeNotes.length - 1; i >= 0; i--) {
+        const note = activeNotes[i];
+        note.y += note.speed * 8;
+
+        if (note.isHold) {
+          note.el.style.top = `${note.y - note.height}px`;
+          const tailY = note.y - note.height;
+
+          if (note.holding) {
+            if (lanePressed[note.lane]) {
+              score += 15;
+              combo++;
+              if (combo > maxCombo) maxCombo = combo;
+              updateComboDisplay();
+              updateHUD();
+              playSound(800, 'sine', 0.03, 0.05);
+
+              if (tailY >= hitLineY - 20) {
+                showFeedback('PERFECT');
+                stats.perfect++;
+                note.el.remove();
+                activeNotes.splice(i, 1);
+                continue;
+              }
+            } else {
+              note.holding = false;
+              showFeedback('MISS');
+              resetCombo();
+              stats.miss++;
+              note.el.remove();
+              activeNotes.splice(i, 1);
+              continue;
+            }
+          }
+
+          if (tailY > hitLineY + 50 && !note.holding) {
+            showFeedback('MISS');
+            resetCombo();
+            stats.miss++;
+            note.el.remove();
+            activeNotes.splice(i, 1);
+          }
+
+        } else {
+          note.el.style.top = `${note.y}px`;
+
+          if (note.y > hitLineY + 50 && !note.hit) {
+            showFeedback('MISS');
+            resetCombo();
+            stats.miss++;
+            note.el.remove();
+            activeNotes.splice(i, 1);
+          }
+        }
+      }
+    }
+
+    // 트랙 누름 판정
+    function pressTrack(laneIndex) {
+      if (!isPlaying || isPaused) return;
+
+      lanePressed[laneIndex] = true;
+
+      const btn = trackBtns[laneIndex];
+      if (btn) btn.classList.add('active');
+
+      const areaHeight = playAreaEl.clientHeight;
+      const hitLineY = areaHeight - 100;
+
+      let closestNote = null;
+      let minDistance = Infinity;
+      let closestIndex = -1;
+
+      for (let i = 0; i < activeNotes.length; i++) {
+        const note = activeNotes[i];
+        if (note.lane === laneIndex && !note.hit && !note.holding) {
+          const distance = Math.abs(note.y - hitLineY);
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestNote = note;
+            closestIndex = i;
+          }
+        }
+      }
+
+      if (closestNote && minDistance < 75) {
+        if (closestNote.isHold) {
+          closestNote.holding = true;
+          closestNote.el.classList.add('holding');
+          showFeedback('PERFECT');
+          playSound(880, 'sine', 0.1, 0.4);
+        } else {
+          let result = '';
+          let points = 0;
+
+          if (minDistance < 20) {
+            result = 'PERFECT';
+            points = 1000;
+            stats.perfect++;
+            playSound(880, 'sine', 0.1, 0.4);
+          } else if (minDistance < 45) {
+            result = 'GREAT';
+            points = 700;
+            stats.great++;
+            playSound(660, 'sine', 0.1, 0.3);
+          } else {
+            result = 'GOOD';
+            points = 400;
+            stats.good++;
+            playSound(440, 'sine', 0.1, 0.2);
+          }
+
+          combo++;
+          if (combo > maxCombo) maxCombo = combo;
+          score += points + (combo * 20);
+
+          showFeedback(result);
+          updateComboDisplay();
+          updateHUD();
+
+          closestNote.el.remove();
+          activeNotes.splice(closestIndex, 1);
+        }
+      } else {
+        playSound(150, 'sawtooth', 0.05, 0.15);
+      }
+    }
+
+    function releaseTrack(laneIndex) {
+      lanePressed[laneIndex] = false;
+      const btn = trackBtns[laneIndex];
+      if (btn) btn.classList.remove('active');
+    }
+
+    // 터치 및 마우스 입력 연동
+    trackBtns.forEach((btn) => {
+      const lane = parseInt(btn.dataset.lane);
+
+      btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        pressTrack(lane);
+      }, { passive: false });
+
+      btn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        releaseTrack(lane);
+      }, { passive: false });
+
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        pressTrack(lane);
+      });
+
+      btn.addEventListener('mouseup', (e) => {
+        e.preventDefault();
+        releaseTrack(lane);
+      });
+
+      btn.addEventListener('mouseleave', (e) => {
+        e.preventDefault();
+        releaseTrack(lane);
+      });
+    });
+
+    playAreaEl.addEventListener('mousedown', (e) => {
+      if (!isPlaying || isPaused) return;
+      const rect = playAreaEl.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const lane = Math.max(0, Math.min(3, Math.floor((x / rect.width) * 4)));
+      pressTrack(lane);
+    });
+
+    playAreaEl.addEventListener('mouseup', () => {
+      lanePressed.fill(false);
+      trackBtns.forEach(b => b.classList.remove('active'));
+    });
+
+    playAreaEl.addEventListener('touchstart', (e) => {
+      if (!isPlaying || isPaused) return;
+      e.preventDefault();
+      const rect = playAreaEl.getBoundingClientRect();
+      for (let i = 0; i < e.touches.length; i++) {
+        const touch = e.touches[i];
+        const x = touch.clientX - rect.left;
+        const lane = Math.max(0, Math.min(3, Math.floor((x / rect.width) * 4)));
+        pressTrack(lane);
+      }
+    }, { passive: false });
+
+    playAreaEl.addEventListener('touchend', (e) => {
+      if (!isPlaying || isPaused) return;
+      if (e.touches.length === 0) {
+        lanePressed.fill(false);
+        trackBtns.forEach(b => b.classList.remove('active'));
+      }
+    });
+
+    // 키보드 입력 연동 (Esc 제회)
+    window.addEventListener('keydown', (e) => {
+      if (!isPlaying || isPaused || e.repeat) return;
+      
+      if (e.key === 'Escape' || e.code === 'Escape') {
+        return;
+      }
+
+      let lane = -1;
+      if (['1', 'd', 'D', 'a', 'A'].includes(e.key)) lane = 0;
+      else if (['2', 'f', 'F', 's', 'S'].includes(e.key)) lane = 1;
+      else if (['3', 'j', 'J', 'k', 'K'].includes(e.key)) lane = 2;
+      else if (['4', 'l', 'L', ';'].includes(e.key)) lane = 3;
+      else {
+        let closestDist = Infinity;
+        const areaHeight = playAreaEl.clientHeight;
+        const hitLineY = areaHeight - 100;
+        
+        for (let i = 0; i < activeNotes.length; i++) {
+          const dist = Math.abs(activeNotes[i].y - hitLineY);
+          if (dist < closestDist) {
+            closestDist = dist;
+            lane = activeNotes[i].lane;
+          }
+        }
+        if (lane === -1) lane = Math.floor(Math.random() * 4);
+      }
+
+      pressTrack(lane);
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'Escape' || e.code === 'Escape') return;
+
+      let lane = -1;
+      if (['1', 'd', 'D', 'a', 'A'].includes(e.key)) lane = 0;
+      else if (['2', 'f', 'F', 's', 'S'].includes(e.key)) lane = 1;
+      else if (['3', 'j', 'J', 'k', 'K'].includes(e.key)) lane = 2;
+      else if (['4', 'l', 'L', ';'].includes(e.key)) lane = 3;
+
+      if (lane !== -1) {
+        releaseTrack(lane);
+      } else {
+        lanePressed.fill(false);
+        trackBtns.forEach(b => b.classList.remove('active'));
+      }
+    });
+
+    function showFeedback(type) {
+      feedbackTextEl.textContent = type;
+      feedbackTextEl.className = type.toLowerCase();
+      feedbackTextEl.style.opacity = '1';
+      feedbackTextEl.style.transform = 'translate(-50%, -50%) scale(1.2)';
+
+      setTimeout(() => {
+        feedbackTextEl.style.opacity = '0';
+        feedbackTextEl.style.transform = 'translate(-50%, -50%) scale(0.9)';
+      }, 200);
+    }
+
+    function updateComboDisplay() {
+      if (combo > 1) {
+        comboContainerEl.classList.remove('hidden');
+        comboValEl.textContent = combo;
+      } else {
+        comboContainerEl.classList.add('hidden');
+      }
+    }
+
+    function resetCombo() {
+      combo = 0;
+      updateComboDisplay();
+    }
+
+    function endGame() {
+      isPlaying = false;
+      isPaused = false;
+      clearInterval(gameTimer);
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
+      gameOver(score);
+    }
+
+    function gameOver(finalScore) {
+      finalScoreEl.textContent = finalScore.toLocaleString();
+      document.getElementById('stat-maxcombo').textContent = maxCombo;
+      document.getElementById('stat-perfect').textContent = stats.perfect;
+      document.getElementById('stat-great').textContent = stats.great;
+      document.getElementById('stat-miss').textContent = stats.miss;
+
+      gameoverScreenEl.classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
